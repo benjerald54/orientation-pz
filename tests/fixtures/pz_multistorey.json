@@ -1,0 +1,40 @@
+{
+  "grids": [
+    {"id": 7, "domain": [[0, 0], [620, 0], [620, 620], [0, 620], [0, 0]]},
+    {"id": 9, "bearing_degrees": 30,
+     "domain": [[-49.75, -49.75], [349.75, -49.75], [349.75, 349.75], [-49.75, 349.75], [-49.75, -49.75]]}
+  ],
+  "buildings": [
+    {"grid_id": 7, "rectangle_meters": [298, 307, 8, 12], "levels": 2},
+    {"grid_id": 7, "rectangle_meters": [300, 10, 12, 4], "levels": 3},
+    {"grid_id": 9, "rectangle_meters": [-45, 330, 3, 6], "levels": 4}
+  ],
+  "expected_projects": [
+    {
+      "pzw_path": "grid_7/world.pzw", "grid_id": 7, "cells": [3, 3],
+      "lots": [
+        {"source_index": 0, "map": "buildings/building_0.tbx", "cell": [0, 1],
+         "offset": [298, 1], "tile_position": [298, 301], "dimensions": [8, 12],
+         "floor_room_ids": [1, 2, 0], "stairs": [[0, 3, 4, "N"]],
+         "core": [2, 3, 3, 6], "roof_floor": 1, "furniture_count": 2,
+         "door": [3, 12, "N"], "window": [3, 0, "N"]},
+        {"source_index": 1, "map": "buildings/building_1.tbx", "cell": [1, 2],
+         "offset": [0, 6], "tile_position": [300, 606], "dimensions": [12, 4],
+         "floor_room_ids": [1, 2, 3, 0], "stairs": [[0, 4, 1, "W"], [1, 4, 1, "W"]],
+         "core": [3, 0, 6, 3], "roof_floor": 2, "furniture_count": 3,
+         "door": [5, 4, "N"], "window": [0, 1, "W"]}
+      ]
+    },
+    {
+      "pzw_path": "grid_9/world.pzw", "grid_id": 9, "cells": [2, 2],
+      "lots": [
+        {"source_index": 2, "map": "buildings/building_2.tbx", "cell": [0, 0],
+         "offset": [5, 14], "tile_position": [5, 14], "dimensions": [3, 6],
+         "floor_room_ids": [1, 2, 3, 4, 0],
+         "stairs": [[0, 1, 1, "N"], [1, 1, 1, "N"], [2, 1, 1, "N"]],
+         "core": [0, 0, 3, 6], "roof_floor": 3, "furniture_count": 0,
+         "door": [0, 6, "N"], "window": null}
+      ]
+    }
+  ]
+}
