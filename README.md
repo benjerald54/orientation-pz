@@ -5,7 +5,8 @@ annotating feature orientations, and orthogonalizing geometry that follows
 each domain's grid. Near-square or otherwise balanced features are marked
 `undetermined` rather than assigned a cardinal orientation.
 
-Install the geometry-validation dependency with `python -m pip install -r requirements.txt`.
+Use Python 3.10 or newer. Install the geometry-validation dependency with
+`python -m pip install -r requirements.txt`.
 
 Coordinate conversions share a `ProjectionContext` anchored at the map's mean
 latitude. It currently uses a local equirectangular approximation and provides
@@ -96,6 +97,94 @@ Polygon edge lengths are capped at the median length for their snapped axis
 when estimating orientation, reducing the influence of unusually long edges
 such as sharp protrusions. Point-only features have an `undetermined`
 orientation.
+
+## PZ building generation
+
+Export buildings after the existing validation, roads, relationships, and block
+stages by adding `--pz-output-dir`:
+
+```sh
+python orientation_detector.py converted-map.geojson oriented-map.geojson \
+  --pz-output-dir generated-pz --pz-tile-size-meters 1 --pz-furnish
+```
+
+The export produces `manifest.json`, `debug.json`, and, for each LocalGrid,
+`grid_<id>/world.pzw` with `grid_<id>/buildings/building_<source_index>.tbx`.
+The exporter is **structurally complete but editor-unverified**. Actual
+verification requires loading the generated project in a real WorldEd/PZ
+environment with the standard tiles and terrain. Its lots reference the
+adjacent building files. Terrain TMX maps must be assigned before Generate Lots.
+
+Building-tagged, generation-ready polygons assigned to a LocalGrid become
+center-sampled tile masks. Representable masks become separate one-room-per-storey
+plans and TBX v4 buildings. Features without a building property are ignored;
+skip diagnostics describe buildings the backend cannot generate. Masks preserve
+concavities and holes. Entrances use existing road-frontage information when
+available and always face reachable exterior space. A basic window is added
+when space permits; `--pz-furnish` adds a chair clear of the entry. Ordinary walls
+come from room boundaries. Flat roofs cover the occupied tiles, including
+nonrectangular footprints. TBX contains no world coordinates.
+
+`building:levels` (or `num_floors`) requests 1–30 occupied storeys, defaulting to
+one. The serializer adds one empty floor for the roof surface. Multistorey
+buildings reserve an aligned 3×6 or 6×3 stair core before room and furniture
+generation, with a stair flight connecting every pair of occupied storeys.
+The core includes clear landings and side circulation on every floor; no
+stairs lead onto the roof. Buildings that cannot fit a valid core are reported
+instead of silently losing requested storeys. Invalid level counts, empty/disconnected/oversized
+masks, missing grids, ineligible features, and overlapping rectangular lots
+are reported in `pz_generation.skipped` and `manifest.json` instead of silently
+being reshaped or discarded. For overlapping lots, the earlier source feature
+keeps its placement. A valid isolated building without a discovered LocalGrid
+is reported as `missing_local_grid`.
+
+PZW does not encode arbitrary building rotation. Each LocalGrid therefore gets
+an independent project with its own tile coordinates, preserving the positions
+of buildings within that grid. The manifest records the geographic origin,
+exact grid bearing, projection reference latitude, tile scale, and any project
+origin shift. Projects receive separate world regions, starting at source-cell
+origin `(70, 0)` and proceeding east in grid-ID order with a two-cell gap after
+each full project extent. This separates this export's projects; it does not
+reassemble their geographic positions or check other installed maps.
+Output is deterministic for identical input, settings, destination, and terrain
+TMX files. Re-export stages
+every generated file before publishing, with rollback if publication fails.
+Generated filenames are replaced; old unreferenced files and unrelated files
+are retained.
+
+The Python API is `annotate_collection(..., pz_output_directory="generated-pz")`.
+For an in-memory backend result, call
+`pz_generation.generate_buildings(features, generation_ready_indices, local_grids)`
+with validated features and the existing `LocalGrid` objects; its `report`
+contains masks, plans, and placement metadata, and its `files` contains the
+serialized documents. `result.write(directory)` exports them and binds native
+absolute conversion/export paths to that destination. The backend also accepts
+`world_origin=(x, y)` for the first project's source-cell origin and
+`terrain_bmps={grid_id: "terrain.bmp"}` for existing, aligned terrain inputs.
+See the notes below for resource paths, regeneration, and remaining editor checks.
+
+Manifest version 2 lists every building candidate with its source ID, LocalGrid
+ID/angle, dimensions, levels, PZ coordinates, cell/lot, TBX path, warnings, and
+staged rejection details. `debug.json` traces the validated footprint through
+the raster mask, bounding box, entrance and stair core to WorldEd placement.
+Independent semantic validators check serialized TBX/PZW content before export
+and again before publishing files. Validate an existing export with:
+
+```sh
+python -m pz_validate generated-pz
+```
+
+Validation covers the exporter's supported building model, including valid
+boundary-crossing lots. It does not run WorldEd or validate game assets.
+
+See [the architecture and reference notes](docs/pz-generation.md) for format
+details and verification limits.
+
+The hand-authored [structural fixture](tests/fixtures/pz_multistorey.json) covers
+2-, 3-, and 4-storey buildings, both stair directions, a lot crossing a cell
+boundary, and a separate rotated LocalGrid. Tests compare exported PZW paths,
+cell/lot coordinates, TBX references and dimensions, room grids, stairs, and
+roofs against its expected structure.
 
 Run the tests with:
 

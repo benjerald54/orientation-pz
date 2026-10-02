@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<world version="1.0" width="2" height="2">
+ <BMPToTMX>
+  <tmxexportdir path="/PROJECT/tmx"/>
+  <rulesfile path=""/>
+  <blendsfile path=""/>
+  <mapbasefile path=""/>
+  <assign-maps-to-world checked="true"/>
+  <warn-unknown-colors checked="true"/>
+  <compress checked="true"/>
+  <copy-pixels checked="true"/>
+  <update-existing checked="false"/>
+ </BMPToTMX>
+ <TMXToBMP>
+  <mainImage generate="true"/>
+  <vegetationImage generate="true"/>
+  <buildingsImage path="" generate="false"/>
+ </TMXToBMP>
+ <GenerateLots>
+  <exportdir path="/PROJECT/lots"/>
+  <ZombieSpawnMap path=""/>
+  <TileDefFolder path=""/>
+  <worldOrigin origin="70,0"/>
+  <numberOfThreads count="4"/>
+ </GenerateLots>
+ <LuaSettings>
+  <spawnPointsFile path="spawnpoints.lua"/>
+  <worldObjectsFile path="objects.lua"/>
+ </LuaSettings>
+  <objecttype name="ParkingStall"/>
+  <objecttype name="TownZone"/>
+  <objectgroup name="ParkingStall" color="#ff007f" defaulttype="ParkingStall"/>
+  <objectgroup name="TownZone" color="#aa0000" defaulttype="TownZone"/>
+ <bmp path="terrain &amp; base.bmp" x="0" y="0" width="2" height="2"/>
+ <cell x="0" y="0" map="">
+ </cell>
+ <cell x="0" y="1" map="">
+  <lot x="299" y="1" level="0" width="10" height="8" map="buildings/a&amp;b.tbx"/>
+ </cell>
+ <cell x="1" y="0" map="">
+ </cell>
+ <cell x="1" y="1" map="">
+ </cell>
+</world>

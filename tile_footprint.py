@@ -43,8 +43,8 @@ class GridTileFrame:
 
     @classmethod
     def from_local_grid(cls, local_grid, tile_size_meters=1.0):
-        if tile_size_meters <= 0:
-            raise ValueError("PZ tile size must be greater than zero")
+        if not math.isfinite(tile_size_meters) or tile_size_meters <= 0:
+            raise ValueError("PZ tile size must be finite and greater than zero")
         angle = math.radians(local_grid.bearing_degrees)
         rotated_domain = [
             _rotate(x, y, angle) for x, y in local_grid.domain_geometry
@@ -122,10 +122,11 @@ class TileFootprint:
         }
 
 
-def rasterize_footprint(geometry, frame):
+def rasterize_footprint(geometry, frame, max_sample_tiles=1_000_000):
     """Rasterize tile centers, crop to occupied cells, and preserve input geometry."""
     tile_geometry = frame.transform_geometry(geometry)
-    if tile_geometry.is_empty or not tile_geometry.is_valid:
+    if (tile_geometry.geom_type not in ("Polygon", "MultiPolygon")
+            or tile_geometry.is_empty or not tile_geometry.is_valid):
         return None
 
     min_x, min_y, max_x, max_y = tile_geometry.bounds
@@ -133,6 +134,8 @@ def rasterize_footprint(geometry, frame):
     first_row = math.floor(min_y)
     last_column = math.ceil(max_x) - 1
     last_row = math.ceil(max_y) - 1
+    if (last_column - first_column + 1) * (last_row - first_row + 1) > max_sample_tiles:
+        raise ValueError("footprint exceeds tile rasterization budget")
     occupied = []
     for row in range(first_row, last_row + 1):
         for column in range(first_column, last_column + 1):

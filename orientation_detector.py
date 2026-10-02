@@ -1101,6 +1101,9 @@ def annotate_collection(
     building_road_adjacency_distance_meters=40,
     minimum_block_area_meters2=100,
     road_boundary_tolerance_meters=1,
+    pz_output_directory=None,
+    pz_tile_size_meters=1.0,
+    pz_furnish=False,
 ):
     if collection.get("type") != "FeatureCollection" or not isinstance(collection.get("features"), list):
         raise ValueError("Input must be a GeoJSON FeatureCollection")
@@ -1120,6 +1123,10 @@ def annotate_collection(
         raise ValueError("Minimum block area must not be negative")
     if road_boundary_tolerance_meters < 0:
         raise ValueError("Road boundary tolerance must not be negative")
+    if pz_output_directory is not None and (
+        not math.isfinite(pz_tile_size_meters) or pz_tile_size_meters <= 0
+    ):
+        raise ValueError("PZ tile size must be finite and greater than zero")
 
     grids, assignments = _discover_local_grids(
         collection["features"],
@@ -1340,6 +1347,15 @@ def annotate_collection(
     road_network = road_network_graph.to_dict()
     serialized_blocks = [block.to_dict() for block in city_blocks]
 
+    pz_output = {}
+    if pz_output_directory is not None:
+        from pz_generation import generate_buildings
+
+        generated = generate_buildings(features, generation_ready_indices, grids,
+                                       tile_size_meters=pz_tile_size_meters, furnish=pz_furnish)
+        generated.write(pz_output_directory)
+        pz_output["pz_generation"] = generated.report
+
     return {
         **collection,
         "features": features,
@@ -1349,6 +1365,7 @@ def annotate_collection(
         "city_blocks": serialized_blocks,
         "generation_ready_feature_indices": generation_ready_indices,
         "local_grids": [_local_grid_feature(grid) for grid in grids],
+        **pz_output,
         "orientation_summary": {
             "dominant_orientation": summary_orientation,
             "feature_counts": counts,
@@ -1400,6 +1417,9 @@ def main():
     parser.add_argument("--building-road-adjacency-distance-meters", type=float, default=40, help="Maximum distance for reporting adjacent roads per building")
     parser.add_argument("--minimum-block-area-meters2", type=float, default=100, help="Minimum area for a road-enclosed block")
     parser.add_argument("--road-boundary-tolerance-meters", type=float, default=1, help="Distance for associating road edges to block boundaries")
+    parser.add_argument("--pz-output-dir", help="Export building TBX files and one WorldEd project per LocalGrid")
+    parser.add_argument("--pz-tile-size-meters", type=float, default=1, help="Meters per PZ tile (default: 1)")
+    parser.add_argument("--pz-furnish", action="store_true", help="Add a basic chair when space permits")
     args = parser.parse_args()
 
     with open(args.input, encoding="utf-8") as source:
@@ -1415,6 +1435,9 @@ def main():
         building_road_adjacency_distance_meters=args.building_road_adjacency_distance_meters,
         minimum_block_area_meters2=args.minimum_block_area_meters2,
         road_boundary_tolerance_meters=args.road_boundary_tolerance_meters,
+        pz_output_directory=args.pz_output_dir,
+        pz_tile_size_meters=args.pz_tile_size_meters,
+        pz_furnish=args.pz_furnish,
     )
     output = json.dumps(result, indent=2) + "\n"
 
