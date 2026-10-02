@@ -1,5 +1,8 @@
 # orientation-pz
 
+What Can You Do?
+
+
 Compile a GeoJSON `FeatureCollection` by detecting local street-grid domains,
 annotating feature orientations, and orthogonalizing geometry that follows
 each domain's grid. Near-square or otherwise balanced features are marked
@@ -126,7 +129,10 @@ come from room boundaries. Flat roofs cover the occupied tiles, including
 nonrectangular footprints. TBX contains no world coordinates.
 
 `building:levels` (or `num_floors`) requests 1–30 occupied storeys, defaulting to
-one. The serializer adds one empty floor for the roof surface. Multistorey
+one. Fractional values round to the nearest storey, with halves rounded up;
+semicolon-separated values use the maximum. Invalid values fall back to one
+storey and add an `invalid_building_levels` warning instead of rejecting the
+building. The serializer adds one empty floor for the roof surface. Multistorey
 buildings reserve an aligned 3×6 or 6×3 stair core before room and furniture
 generation, with a stair flight connecting every pair of occupied storeys.
 The core includes clear landings and side circulation on every floor; no
@@ -134,7 +140,9 @@ stairs lead onto the roof. Buildings that cannot fit a valid core are reported
 instead of silently losing requested storeys. Invalid level counts, empty/disconnected/oversized
 masks, missing grids, ineligible features, and overlapping rectangular lots
 are reported in `pz_generation.skipped` and `manifest.json` instead of silently
-being reshaped or discarded. For overlapping lots, the earlier source feature
+being reshaped or discarded. Tiny footprints with no covered tile centers have
+their own rejection reason, and the manifest counts rejections by reason. For
+overlapping lots, the earlier source feature
 keeps its placement. A valid isolated building without a discovered LocalGrid
 is reported as `missing_local_grid`.
 
@@ -163,9 +171,12 @@ absolute conversion/export paths to that destination. The backend also accepts
 `terrain_bmps={grid_id: "terrain.bmp"}` for existing, aligned terrain inputs.
 See the notes below for resource paths, regeneration, and remaining editor checks.
 
-Manifest version 2 lists every building candidate with its source ID, LocalGrid
+Manifest version 3 lists every building candidate with its source ID, LocalGrid
 ID/angle, dimensions, levels, PZ coordinates, cell/lot, TBX path, warnings, and
-staged rejection details. `debug.json` traces the validated footprint through
+staged rejection details. It adds rejection counts by reason; the validator
+continues to accept version 2 manifests. Fractional or semicolon-normalized
+levels and invalid-value fallbacks are identified in each building's `warnings`
+list. `debug.json` traces the validated footprint through
 the raster mask, bounding box, entrance and stair core to WorldEd placement.
 Independent semantic validators check serialized TBX/PZW content before export
 and again before publishing files. Validate an existing export with:
@@ -177,10 +188,10 @@ python -m pz_validate generated-pz
 Validation covers the exporter's supported building model, including valid
 boundary-crossing lots. It does not run WorldEd or validate game assets.
 
-See [the architecture and reference notes](docs/pz-generation.md) for format
+See [the architecture and reference notes](pz-generation.md) for format
 details and verification limits.
 
-The hand-authored [structural fixture](tests/fixtures/pz_multistorey.json) covers
+The hand-authored [structural fixture](../tests/fixtures/pz_multistorey.json) covers
 2-, 3-, and 4-storey buildings, both stair directions, a lot crossing a cell
 boundary, and a separate rotated LocalGrid. Tests compare exported PZW paths,
 cell/lot coordinates, TBX references and dimensions, room grids, stairs, and
